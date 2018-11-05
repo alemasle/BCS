@@ -31,23 +31,23 @@ def keccak(lr=576, c=1024):
 
 m = change_to_be_bin()
 
-def padding(m=m,lr=576):
-    mess = []
-    if len(m)<lr:
-        if len(m)>lr-1: #on crée un deuxieme bloc 0---01
-            mess.append(m|1)
-            mess.append(0|1)
-        else:
-            mess.append(m|1)
-            for i in range((lr-2)-len(m)):
-                mess[mess.count()-1] = mess[mess.count()-1]|0
-            mess[mess.count()-1] = mess[mess.count()-1]|1
-    else:
-        mess.append(m[0:lr])
-        mess.append(padding(m[lr:],lr))
-    return mess
+# def padding(m=m,lr=576):
+#     mess = []
+#     if len(m)<lr:
+#         if len(m)>lr-1: #on crée un deuxieme bloc 0---01
+#             mess.append(m|1)
+#             mess.append(0|1)
+#         else:
+#             mess.append(m|1)
+#             for i in range((lr-2)-len(m)):
+#                 mess[mess.count()-1] = mess[mess.count()-1]|0
+#             mess[mess.count()-1] = mess[mess.count()-1]|1
+#     else:
+#         mess.append(m[0:lr])
+#         mess.append(padding(m[lr:],lr))
+#     return mess
 
-def sha3Hash(string):
+def sha3Hash(data):
     s = hashlib.sha3_256()
     s.update(data)
     dig = s.hexdigest()
@@ -56,7 +56,7 @@ def sha3Hash(string):
 
 def main():
     data = input("Message to hash sha3-256:\n").encode()
-    sha3Hash(data)
+    print(sha3Hash(data))
 
 
 
