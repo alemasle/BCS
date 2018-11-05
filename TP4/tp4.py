@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import random
+from sys import argv
+import argparse
 
 def decoupe_blocks(data, size):
     data_size = len(data)
@@ -15,8 +18,29 @@ def decoupe_blocks(data, size):
 
     return list_block
 
+def CBC(iv, blocks, key, size):
 
+    list_chiffre = []
+    previous = iv
+    for b in blocks:
+        tmp_block = int(b, 2)
+        tmp_prev = int(previous, 2)
+        xored = tmp_block ^ tmp_prev
+        chiffrement = bin(chiffrage(xored, int(key,2))[2:]
 
+        while len(chiffrement) < size: # add '0' to make 8 bits long in string
+            chiffrement = '0' + chiffrement
+
+        list_chiffre.append(chiffrement)
+        previous = list_chiffre[-1]
+
+    print(list_chiffre)
+    return list_chiffre
+
+def chiffrage(msg, key):
+    print(msg)
+    print(key)
+    return msg ^ key
 
 
 def string_to_bytes(m='a'):
@@ -28,7 +52,29 @@ def string_to_bytes(m='a'):
         li += tmp
     return li
 
-message = input("Message:\n")
-msg = string_to_bytes(message)
-print(msg)
-decoupe_blocks(msg, 10)
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("message", help="Le message a chiffrer")
+    parser.add_argument("clef", help="La clé de chiffrement (Message)")
+    args = parser.parse_args()
+
+
+    size_block = 10
+    # message = input("Message:\n")
+    # clef = input("Clé:\n")
+    msg = string_to_bytes(args.message)
+    key = string_to_bytes(args.clef)
+    li = decoupe_blocks(msg, size_block)
+    iv = bin(random.getrandbits(size_block))[2:]
+
+    print("message:", args.message, "\nclef:", args.clef)
+    # print("message:", msg, "\niv:", iv, "\nkey:", key)
+    # print("block decoupes:", li)
+
+    CBC(iv, li, key, size_block)
+
+
+main()
+
+#
