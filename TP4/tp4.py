@@ -2,6 +2,7 @@
 import random
 from sys import argv
 import argparse
+from Midori64 import midori, antiMidori
 
 def decoupe_blocks(data, size):
     data_size = len(data)
@@ -26,20 +27,18 @@ def CBC(iv, blocks, key, size):
         tmp_block = int(b, 2)
         tmp_prev = int(previous, 2)
         xored = tmp_block ^ tmp_prev
-        chiffrement = bin(chiffrage(xored, int(key,2))[2:]
+        chiffrement = bin(chiffrage(xored, int(key,2)))[2:]
 
         while len(chiffrement) < size: # add '0' to make 8 bits long in string
             chiffrement = '0' + chiffrement
-
+        print("chiffred:", chiffrement)
         list_chiffre.append(chiffrement)
         previous = list_chiffre[-1]
 
     print(list_chiffre)
     return list_chiffre
 
-def chiffrage(msg, key):
-    print(msg)
-    print(key)
+def chiffrage(msg, key): # Midori a faire
     return msg ^ key
 
 
@@ -56,25 +55,23 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("message", help="Le message a chiffrer")
-    parser.add_argument("clef", help="La clé de chiffrement (Message)")
+    parser.add_argument("key", help="La clé de chiffrement (Message)")
     args = parser.parse_args()
 
-
-    size_block = 10
-    # message = input("Message:\n")
-    # clef = input("Clé:\n")
+    size_block = 16
     msg = string_to_bytes(args.message)
-    key = string_to_bytes(args.clef)
+    key = string_to_bytes(args.key)
     li = decoupe_blocks(msg, size_block)
     iv = bin(random.getrandbits(size_block))[2:]
 
-    print("message:", args.message, "\nclef:", args.clef)
+    print("message:", args.message, "\nclef:", args.key)
     # print("message:", msg, "\niv:", iv, "\nkey:", key)
     # print("block decoupes:", li)
 
     CBC(iv, li, key, size_block)
 
+if __name__ == '__main__':
+    main()
 
-main()
 
 #
