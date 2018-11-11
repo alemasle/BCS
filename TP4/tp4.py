@@ -113,12 +113,20 @@ def main():
     print("chiffre:", "".join(res))
 
 
+    # Derivation de cles/vecteurs d'initialisation a partir d'un mot de passe
+    # MAC()    EMAC ou CMAC par exemple (HMAC?)
+    # Chiffre authentifie base sur Encrypt-then-MAC
+
+
+
+
+
     cl = CTR(iv, res, ke) # Dechiffrement
 
     final = ""
     for b in cl:
         final += b
-    
+
     print("dechiffre:", bytes.fromhex(final).decode())
 
 
