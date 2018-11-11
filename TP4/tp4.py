@@ -20,25 +20,6 @@ def decoupe_blocks(data, size):
 
     return list_block
 
-def CBC(iv, blocks, key, size):
-
-    list_chiffre = []
-    previous = iv
-    for b in blocks:
-        tmp_block = int(b, 2)
-        tmp_prev = int(previous, 2)
-        xored = tmp_block ^ tmp_prev
-        chiffrement = bin(chiffrage(xored, int(key,2)))[2:]
-
-        while len(chiffrement) < size: # add '0' to make 8 bits long in string
-            chiffrement = '0' + chiffrement
-        print("chiffred:", chiffrement)
-        list_chiffre.append(chiffrement)
-        previous = list_chiffre[-1]
-
-    print(list_chiffre)
-    return list_chiffre
-
 def chiffrage(msg, key): # Midori a utiliser
     return msg ^ key
 
@@ -52,7 +33,6 @@ def int_to_hex(i):
     h = hex(i)[2:]
     while len(h) < 8:
         h = '0' + h
-
     return h
 
 def CTR(nonce, blocks, key):
@@ -67,15 +47,6 @@ def CTR(nonce, blocks, key):
         nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
 
     return list_ret
-
-def string_to_bytes(m='a'):
-    li = ""
-    for i in m:
-        tmp = bin(ord(i))[2:]
-        while len(tmp) < 8:
-            tmp = '0' + tmp
-        li += tmp
-    return li
 
 def string_to_hex(m):
     res = []
@@ -112,14 +83,9 @@ def main():
     res = CTR(iv, li, ke) # Chiffrement
     print("chiffre:", "".join(res))
 
-
     # Derivation de cles/vecteurs d'initialisation a partir d'un mot de passe
     # MAC()    EMAC ou CMAC par exemple (HMAC?)
     # Chiffre authentifie base sur Encrypt-then-MAC
-
-
-
-
 
     cl = CTR(iv, res, ke) # Dechiffrement
 
