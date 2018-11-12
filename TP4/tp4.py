@@ -20,9 +20,6 @@ def decoupe_blocks(data, size):
 
     return list_block
 
-def chiffrage(msg, key): # Midori a utiliser
-    return msg ^ key
-
 def array_to_hex(li):
     res = ""
     for c in li:
@@ -55,13 +52,27 @@ def string_to_hex(m):
         res.append(int(tmp, 16))
     return res
 
-def generate_key(key):
-    hash = sha3Hash(key)
+def hash_mdp(key):
+    hash = sha3Hash(key) # Return hash taille 64
+    tmp = int(hash[:32], 16)
+    tmp2 = int(hash[32:], 16)
+    tmp3 = hex(tmp ^ tmp2)[2:] # Return hash taille 32
 
-    tmp = int(hash[0:32], 16)
-    tmp2 = int(hash[32:64], 16)
-    return hex(tmp ^ tmp2)[2:]
+    while len(tmp3) < 32:   # Complete par un 0 si la forme hexadecimal du xor rend 31 chars
+        tmp3 = '0' + tmp3
 
+    return tmp3
+
+
+def generate_from_mdp(hmdp):
+    tmp = hmdp[:16] + hex(1)
+    tmp2 = hmdp[16:] + hex(2)
+    ke = sha3Hash(tmp.encode())
+    # print("len key:", len(ke))
+    ke = hash_mdp(ke.encode())   # Return key taille 32 (hash)
+    # print("len key:", len(ke))
+    nonce = sha3Hash(tmp2.encode())[:24] # Nonce taille 24 hexa pour atteindre 32 char hexa avec le counter
+    return ke, nonce
 
 
 def main():
@@ -73,28 +84,26 @@ def main():
     size_block = 16 #16 en char hexa soit 8 octets --> 64 bits
 
     msg = args.message.encode().hex()
-    key = generate_key(args.key.encode())
+    hmdp = hash_mdp(args.key.encode())
+    ke, nonce = generate_from_mdp(hmdp)
+    ke = string_to_hex(ke) # Transforme en tableau d'hexadecimal
 
     li = decoupe_blocks(msg, size_block)
-    iv = hex(random.getrandbits(size_block * 6))[2:] # Nonce taille 24 hexa pour atteindre 32 char hexa
 
-    ke = string_to_hex(key)
-
-    res = CTR(iv, li, ke) # Chiffrement
+    res = CTR(nonce, li, ke) # Chiffrement
     print("chiffre:", "".join(res))
 
     # Derivation de cles/vecteurs d'initialisation a partir d'un mot de passe
     # MAC()    EMAC ou CMAC par exemple (HMAC?)
     # Chiffre authentifie base sur Encrypt-then-MAC
 
-    cl = CTR(iv, res, ke) # Dechiffrement
+    cl = CTR(nonce, res, ke) # Dechiffrement
 
     final = ""
     for b in cl:
         final += b
 
     print("dechiffre:", bytes.fromhex(final).decode())
-
 
 if __name__ == '__main__':
     main()
