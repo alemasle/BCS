@@ -15,8 +15,33 @@ def decoupe_blocks(data, size):
     for i in range(0, data_size, size):
         list_block.append(data[i: i+size])
 
-    while len(list_block[-1]) < size:
-        list_block[-1] = list_block[-1] + '0'
+    if len(list_block[-1]) == size: # Cas bloc plein --> Ajout d'un bloc complet de padding 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+        tmp = ['0']*16
+        tmp[0] = '1'
+        tmp[-1] = '1'
+        list_block.append("".join(tmp))
+
+    elif len(list_block[-1]) == size -1: # Cas bloc avec un emplacement libre, on met un '1' et
+                                         # on remplis de '0' un nouveau bloc que l'on termine par '1'
+        list_block[-1] += '1'
+        tmp = ['0']*16
+        tmp[-1] = '1'
+        list_block.append("".join(tmp))
+
+    else:                                # Cas d'un bloc non rempli, on pad avec 1 0 0 .. 0 1
+        tmp_li = list(list_block[-1])
+        tmp_len = len(tmp_li)
+
+        to_pad = size - tmp_len
+
+        tmp_li.append('1')
+        tmp_li += ['0']*(to_pad -2)
+        tmp_li.append('1')
+
+        list_block[-1] = "".join(tmp_li)
+
+    # while len(list_block[-1]) < size:
+    #     list_block[-1] = list_block[-1] + '0'
 
     return list_block
 
@@ -98,15 +123,14 @@ def main():
     # Chiffre authentifie base sur Encrypt-then-MAC
 
     cl = CTR(nonce, res, ke) # Dechiffrement
-
     final = ""
     for b in cl:
         final += b
 
-    print("dechiffre:", bytes.fromhex(final).decode())
+    final = final.rstrip("10*1") # Retrouver le message hexadecimal sans le padding
+    res_final = bytes.fromhex(final).decode()
+
+    print("dechiffre:", res_final)
 
 if __name__ == '__main__':
     main()
-
-
-#
