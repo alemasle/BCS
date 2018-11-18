@@ -3,7 +3,13 @@ import random
 import argparse
 from sys import argv
 from Midori64 import midori
-from SHA3 import sha3Hash
+import hashlib
+
+def sha3Hash(data):
+    s = hashlib.sha3_256()
+    s.update(data)
+    dig = s.hexdigest()
+    return dig;
 
 def decoupe_blocks(data, size, mode="enc"):
     data_size = len(data)
@@ -100,6 +106,14 @@ def generate_from_mdp(hmdp):
     mackey = sha3Hash(tmp3.encode())
     return ke, nonce, mackey
 
+def HMAC(mackey, msg): # Generer un hash de taille 8 octets
+    tmp = msg + mackey
+    h = hash_mdp(tmp.encode())
+    h = hex( int(h[:16],16) ^ int(h[16:],16) )[2:]
+    while len(h) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend 15 chars ou moins
+        h = '0' + h
+    return h
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -136,11 +150,11 @@ def main():
 
     elif args.message_file is not None:
         if args.enc:
-            with open(args.message_file) as file:
+            with open(args.message_file, encoding="utf-8") as file:
                 msg = file.read().encode().hex() # On transforme en hexadecimal le message du fichier
 
         elif args.dec:
-            with open(args.message_file) as file:
+            with open(args.message_file, encoding="utf-8") as file:
                 msg = hex(int(file.read(), 16)).lstrip("0x") # On recupere l'hexadecimal du fichier
 
         if msg == "":
@@ -167,20 +181,26 @@ def main():
         print("You must give a password or a file un argument")
         exit(0)
 
-
     hmdp = hash_mdp(mdp.encode()) # Creer un hash du mot de passe
     key, nonce, mackey = generate_from_mdp(hmdp) # Derivation de cles/vecteur d'initialisation (nonce) a partir du mot de passe
     key = string_to_hex(key) # Transforme la clef en tableau d'hexadecimal
-    mackey = string_to_hex(mackey) # Transforme la clef du mac en tableau d'hexadecimal
+
+    if args.dec: # verification Signature MAC
+        tmp_mac = msg[-16:] # Recupere le MAC du chiffre
+        tmp_cypher = msg[:-16] # Recupere le message du chiffre
+        resultat = HMAC(mackey, tmp_cypher)
+        if resultat != tmp_mac:
+            print("Signature ou mot de passe invalide!")
+            exit(0)
+        else:
+            msg = msg[:-16] # Separation du mac et du message
+
 
     size_block = 16 #16 en char hexa soit 8 octets --> 64 bits
     mode = "dec" if args.dec else "enc"
     li = decoupe_blocks(msg, size_block, mode) # Decoupe le message en n bloc de 8 octets
 
     res = CTR(nonce, li, key) # Chiffrement/Dechiffrement de tous les blocs avec le mode CTR
-
-    # res = HMAC(mackey, res)
-
 
     final = ""
     if args.enc:
@@ -190,16 +210,17 @@ def main():
         final = "".join(res)
         final = bytes.fromhex(final).decode()
 
+    if mode == 'enc': # Encrypt-then-MAC
+        mac = HMAC(mackey, final) # Signature MAC du message
+        final = final + mac # Concatenation du message chiffre et son MAC sur 8 octets supplementaires
+
     if args.output == "stdout":
-        print(final)
+        print("Resultat:", final)
     else:
         with open(args.output, "w") as file:
             file.write(final)
         print("-->", args.output)
 
-    # Derivation de cles/vecteurs d'initialisation a partir d'un mot de passe
-    # MAC()    EMAC ou CMAC par exemple (HMAC?)
-    # Chiffre authentifie base sur Encrypt-then-MAC
 
 if __name__ == '__main__':
     main()
