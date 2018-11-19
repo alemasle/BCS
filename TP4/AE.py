@@ -71,6 +71,8 @@ def CTR(nonce, blocks, key):
         ret = midori(nonce_counter, key)
         res = array_to_hex(ret)
         fin = hex(int(res, 16) ^ int(b, 16))[2:]
+        while len(fin) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend 16 chars
+            fin = '0' + fin
         list_ret.append(fin)
         ctr += 1
         nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
@@ -142,7 +144,7 @@ def main():
         if args.enc:
             msg = args.message.encode().hex()
         elif args.dec:
-            msg = hex(int(args.message, 16)).lstrip("0x")
+            msg = args.message
             modulo = len(msg)%16
             if modulo != 0:
                 print("This message can not be uncypher. (Wrong format)")
@@ -155,7 +157,11 @@ def main():
 
         elif args.dec:
             with open(args.message_file, encoding="utf-8") as file:
-                msg = hex(int(file.read(), 16)).lstrip("0x") # On recupere l'hexadecimal du fichier
+                msg = file.read() # On recupere l'hexadecimal du fichier
+                modulo = len(msg)%16
+                if modulo != 0:
+                    print("This message can not be uncypher. (Wrong format)")
+                    exit(0)
 
         if msg == "":
             print("The file", args.message_file, "is empty")
@@ -208,7 +214,18 @@ def main():
 
     elif args.dec:
         final = "".join(res)
+
+    if final[-1] == '1': # Suppresion du padding
+        final = final[:-1]
+        while final[-1] == '0':
+            final = final[:-1]
+
+        if final[-1] == '1':
+            final = final[:-1]
+
         final = bytes.fromhex(final).decode()
+
+
 
     if mode == 'enc': # Encrypt-then-MAC
         mac = HMAC(mackey, final) # Signature MAC du message
