@@ -146,6 +146,8 @@ def main():
         elif args.dec:
             msg = args.message
             modulo = len(msg)%16
+            if msg[-1] == "\n":
+                msg = msg[:-1]
             if modulo != 0:
                 print("This message can not be uncypher. (Wrong format)")
                 exit(0)
@@ -158,8 +160,11 @@ def main():
         elif args.dec:
             with open(args.message_file, encoding="utf-8") as file:
                 msg = file.read() # On recupere l'hexadecimal du fichier
+                if msg[-1] == "\n":
+                    msg = msg[:-1]
                 modulo = len(msg)%16
                 if modulo != 0:
+                    print(msg, len(msg))
                     print("This message can not be uncypher. (Wrong format)")
                     exit(0)
 
