@@ -100,7 +100,7 @@ def generate_from_mdp(hmdp):
     tmp = hmdp[:16] + hex(1)
     tmp2 = hmdp[16:] + hex(2)
     tmp3 = hmdp + hex(3)
-    ke = sha3Hash(tmp.encode())
+    ke = sha3Hash(tmp.encode()) # 64 hexa
     ke = hash_mdp(ke.encode())   # Return key taille 32 (hash)
     nonce = sha3Hash(tmp2.encode())[:24] # Nonce taille 24 hexa pour atteindre 32 char hexa avec le counter
     mackey = sha3Hash(tmp3.encode())
@@ -110,7 +110,7 @@ def HMAC(mackey, msg): # Generer un hash de taille 8 octets
     tmp = msg + mackey
     h = hash_mdp(tmp.encode())
     h = hex( int(h[:16],16) ^ int(h[16:],16) )[2:]
-    while len(h) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend 15 chars ou moins
+    while len(h) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend 16 chars ou moins
         h = '0' + h
     return h
 
@@ -227,8 +227,6 @@ def main():
             final = final[:-1]
 
         final = bytes.fromhex(final).decode()
-
-
 
     if mode == 'enc': # Encrypt-then-MAC
         mac = HMAC(mackey, final) # Signature MAC du message
