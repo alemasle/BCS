@@ -46,9 +46,6 @@ def decoupe_blocks(data, size, mode="enc"):
 
             list_block[-1] = "".join(tmp_li)
 
-    # while len(list_block[-1]) < size:
-    #     list_block[-1] = list_block[-1] + '0'
-
     return list_block
 
 def array_to_hex(li):
@@ -67,11 +64,12 @@ def CTR(nonce, blocks, key):
     ctr = 0
     nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
     list_ret = []
+    length_blocks = len(blocks) - 1
     for b in blocks:
         ret = midori(nonce_counter, key)
         res = array_to_hex(ret)
         fin = hex(int(res, 16) ^ int(b, 16))[2:]
-        while len(fin) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend 16 chars
+        while len(fin) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend moins de 16 chars
             fin = '0' + fin
         list_ret.append(fin)
         ctr += 1
@@ -155,7 +153,7 @@ def main():
     elif args.message_file is not None:
         if args.enc:
             with open(args.message_file, encoding="utf-8") as file:
-                msg = file.read().encode().hex() # On transforme en hexadecimal le message du fichier
+                msg = file.read().encode().hex() # On transforme en hexadecimal le message du fichier                                                                     )
 
         elif args.dec:
             with open(args.message_file, encoding="utf-8") as file:
