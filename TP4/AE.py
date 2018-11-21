@@ -122,16 +122,16 @@ def main():
     group3 = parser.add_mutually_exclusive_group(required=True)
 
     # Cypher mode
-    group.add_argument("--enc", help="Mode Chiffrement", action="store_true")
-    group.add_argument("--dec", help="Mode Dechiffrement", action="store_true")
+    group.add_argument("-e","--enc", help="Mode Chiffrement", action="store_true")
+    group.add_argument("-d","--dec", help="Mode Dechiffrement", action="store_true")
 
     # Input mode
     group2.add_argument("-m","--message", help="Le message a chiffrer/dechiffrer")
     group2.add_argument("--message-file", help="Le fichier a chiffrer/dechiffrer")
 
     # Input password mode
-    group3.add_argument("-p","--password", help="Le mot de passe de chiffrement")
-    group3.add_argument("--password-file", help="Le fichier contenant le mot de passe de chiffrement")
+    group3.add_argument("-p","--password", help="Le mot de passe de chiffrement/dechiffrement")
+    group3.add_argument("--password-file", help="Le fichier contenant le mot de passe de chiffrement/dechiffrement")
 
     parser.add_argument("-o","--output", help="Le fichier de sortie (sortie standard par défaut)", default="stdout")
     args = parser.parse_args()
@@ -154,6 +154,7 @@ def main():
         if args.enc:
             with open(args.message_file, encoding="utf-8") as file:
                 msg = file.read().encode().hex() # On transforme en hexadecimal le message du fichier                                                                     )
+
 
         elif args.dec:
             with open(args.message_file, encoding="utf-8") as file:
