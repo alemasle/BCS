@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import random
 import argparse
+import hashlib
+import binascii
 from sys import argv
 from Midori64 import midori
-import hashlib
 
 def sha3Hash(data):
     s = hashlib.sha3_256()
@@ -97,9 +98,9 @@ def hash_mdp(key):
 
 
 def generate_from_mdp(hmdp):
-    tmp = hmdp[:16] + hex(1)
-    tmp2 = hmdp[16:] + hex(2)
-    tmp3 = hmdp + hex(3)
+    tmp = hmdp[:16] + hex(1)[2:]
+    tmp2 = hmdp[16:] + hex(2)[2:]
+    tmp3 = hmdp + hex(3)[2:]
     ke = sha3Hash(tmp.encode()) # 64 hexa
     ke = hash_mdp(ke.encode())   # Return key taille 32 (hash)
     nonce = sha3Hash(tmp2.encode())[:24] # Nonce taille 24 hexa pour atteindre 32 char hexa avec le counter
@@ -138,6 +139,7 @@ def main():
 
     # Recupere le message sous forme de string
     msg = ""
+    binary = False
     if args.message is not None:
         if args.enc:
             msg = args.message.encode().hex()
@@ -152,20 +154,28 @@ def main():
 
     elif args.message_file is not None:
         if args.enc:
-            with open(args.message_file, encoding="utf-8") as file:
-                msg = file.read().encode().hex() # On transforme en hexadecimal le message du fichier                                                                     )
-
+            try:
+                with open(args.message_file, "r") as file:
+                    msg = file.read().encode().hex() # On transforme en hexadecimal le message du fichier
+            except UnicodeDecodeError as e:
+                with open(args.message_file, "rb") as file:
+                    msg = file.read().hex()
+                    binary = True
 
         elif args.dec:
-            with open(args.message_file, encoding="utf-8") as file:
+            # try:
+            with open(args.message_file, "r") as file:
                 msg = file.read() # On recupere l'hexadecimal du fichier
-                if msg[-1] == "\n":
-                    msg = msg[:-1]
-                modulo = len(msg)%16
-                if modulo != 0:
-                    print(msg, len(msg))
-                    print("This message can not be uncypher. (Wrong format)")
-                    exit(0)
+                if msg[-3:] == 'bin':
+                    binary = True
+                    msg = msg[:-3]
+
+            if msg[-1] == "\n":
+                msg = msg[:-1]
+            modulo = len(msg)%16
+            if modulo != 0:
+                print("This message can not be uncypher. (Wrong format)")
+                exit(0)
 
         if msg == "":
             print("The file", args.message_file, "is empty")
@@ -181,7 +191,7 @@ def main():
         mdp = args.password
 
     elif args.password_file is not None:
-        with open(args.password_file) as file_pass:
+        with open(args.password_file, 'r') as file_pass:
             mdp = file_pass.read() # On recupere le contenu du fichier avec le mot de passe
         if mdp == "":
             print("The file", args.password_file, "is empty")
@@ -205,7 +215,6 @@ def main():
         else:
             msg = msg[:-16] # Separation du mac et du message
 
-
     size_block = 16 #16 en char hexa soit 8 octets --> 64 bits
     mode = "dec" if args.dec else "enc"
     li = decoupe_blocks(msg, size_block, mode) # Decoupe le message en n bloc de 8 octets
@@ -227,17 +236,30 @@ def main():
         if final[-1] == '1':
             final = final[:-1]
 
-        final = bytes.fromhex(final).decode()
-
     if mode == 'enc': # Encrypt-then-MAC
         mac = HMAC(mackey, final) # Signature MAC du message
         final = final + mac # Concatenation du message chiffre et son MAC sur 8 octets supplementaires
 
     if args.output == "stdout":
-        print("Resultat:", final)
+        if not binary and args.dec:
+            final = bytes.fromhex(final).decode()
+        print(final)
+
     else:
-        with open(args.output, "w") as file:
-            file.write(final)
+        if binary and args.dec:
+            with open(args.output, "wb") as file:
+                final = binascii.unhexlify(final)
+                file.write(final)
+        else:
+            with open(args.output, "w") as file:
+                if binary and args.enc:
+                    final = final + 'bin'   # On ajoute 'bin' a la fin pour que le dechiffrement sache le type de fichier
+
+                elif not binary and args.dec:
+                    final = bytes.fromhex(final).decode()
+
+                file.write(final)
+
         print("-->", args.output)
 
 
