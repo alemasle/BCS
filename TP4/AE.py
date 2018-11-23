@@ -145,9 +145,9 @@ def main():
             msg = args.message.encode().hex()
         elif args.dec:
             msg = args.message
-            modulo = len(msg)%16
             if msg[-1] == "\n":
                 msg = msg[:-1]
+            modulo = len(msg)%16
             if modulo != 0:
                 print("This message can not be uncypher. (Wrong format)")
                 exit(0)
@@ -227,14 +227,17 @@ def main():
 
     elif args.dec:
         final = "".join(res)
-
-    if final[-1] == '1': # Suppresion du padding
-        final = final[:-1]
-        while final[-1] == '0':
+        if final[-1] == '1': # Suppresion du padding
             final = final[:-1]
+            while final[-1] == '0':
+                final = final[:-1]
 
-        if final[-1] == '1':
-            final = final[:-1]
+            if final[-1] == '1':
+                final = final[:-1]
+            else:
+                print("Error padding")
+                exit(0)
+
 
     if mode == 'enc': # Encrypt-then-MAC
         mac = HMAC(mackey, final) # Signature MAC du message
