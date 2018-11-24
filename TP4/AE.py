@@ -15,6 +15,7 @@ def sha3Hash(data):
 
 
 def cutting(data, data_size, size=16, child=None):
+    # print("Child:", child.fileno(), " starts cutting", data_size)
     list_block = [data[i:i+size] for i in range(0, data_size, size) ]
 
     if child is None:
@@ -70,9 +71,13 @@ def decoupe_blocks(data, size, mode="enc"):
         p4.start()
 
         p1_recv = parent1.recv()
+        # print("First part cutting OK")
         p2_recv = parent2.recv()
+        # print("Second part cutting OK")
         p3_recv = parent3.recv()
+        # print("Third part cutting OK")
         p4_recv = parent4.recv()
+        # print("Fourth part cutting OK")
         p5_recv = []
 
         if fifth_bordure != "":
@@ -80,6 +85,7 @@ def decoupe_blocks(data, size, mode="enc"):
             p5 = multiprocessing.Process(target=cutting, args=(fifth_bordure, len(fifth_bordure), size, child5))
             p5.start()
             p5_recv = parent5.recv()
+            # print("Fifth part cutting OK")
             p5.join()
             parent5.close(); child5.close()
 
@@ -143,7 +149,13 @@ def CTR(nonce, blocks, key, counter_start=0, child=None):
     nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
     list_ret = []
     length_blocks = len(blocks) - 1
+    # print("child info:", child.fileno(), 'work to do=', length_blocks)
+
+    cpt = 0
+    total = len(blocks)
+
     for b in blocks:
+
         ret = midori(nonce_counter, key)
         res = array_to_hex(ret)
         fin = hex(int(res, 16) ^ int(b, 16))[2:]
@@ -152,6 +164,9 @@ def CTR(nonce, blocks, key, counter_start=0, child=None):
         list_ret.append(fin)
         ctr += 1
         nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
+        cpt += 1
+        if child.fileno() == 10 and (cpt / total) * 100 % 2 == 0:
+            print((cpt / total)*100, "% --", cpt, "/", total)
 
     if child is None:
         return list_ret
@@ -163,7 +178,6 @@ def multiprocessing_CTR(nonce, blocks, key):
     list_ret = []
 
     if nb_block >= 4:
-        print("Multi CTR")
         parent1, child1 = multiprocessing.Pipe()
         parent2, child2 = multiprocessing.Pipe()
         parent3, child3 = multiprocessing.Pipe()
@@ -196,9 +210,13 @@ def multiprocessing_CTR(nonce, blocks, key):
         p4.start()
 
         p1_recv = parent1.recv()
+        # print("First part CTR OK")
         p2_recv = parent2.recv()
+        # print("Second part CTR OK")
         p3_recv = parent3.recv()
+        # print("Third part CTR OK")
         p4_recv = parent4.recv()
+        # print("Fourth part CTR OK")
         p5_recv = []
 
         if fifth_bordure != "":
@@ -207,6 +225,7 @@ def multiprocessing_CTR(nonce, blocks, key):
             p5 = multiprocessing.Process(target=CTR, args=(nonce, fifth_bordure, key, ctr5, child5))
             p5.start()
             p5_recv = parent5.recv()
+            # print("FIFTH part CTR OK")
             p5.join()
             parent5.close(); child5.close()
 
@@ -226,14 +245,6 @@ def multiprocessing_CTR(nonce, blocks, key):
         list_ret = CTR(nonce, blocks, key)
 
     return list_ret
-
-
-
-
-
-
-
-
 
 def string_to_hex(m):
     res = []
