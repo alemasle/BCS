@@ -31,8 +31,6 @@ def decoupe_blocks(data, size, mode="enc"):
     list_block = []
 
     if nb_block >= 4:
-        print("Multiprocessing...", flush=True)
-
         parent1, child1 = multiprocessing.Pipe()
         parent2, child2 = multiprocessing.Pipe()
         parent3, child3 = multiprocessing.Pipe()
