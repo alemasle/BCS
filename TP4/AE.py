@@ -36,18 +36,6 @@ def decoupe_blocks(data, size, mode="enc"):
         parent3, child3 = multiprocessing.Pipe()
         parent4, child4 = multiprocessing.Pipe()
 
-        """
-        Exemple nb_block = 10
-
-        first_bordure = data[0:2]
-        second_bordure = data[2:4]
-        third_bordure = data[4:6]
-        forth_bordure = data[6:8]
-
-        if nb_block % 4 > 0:
-            fifth_bordure = data[8:]
-        """
-
         index = (nb_block // 4)*size
 
         first_bordure = data[0 : index]
@@ -59,6 +47,17 @@ def decoupe_blocks(data, size, mode="enc"):
         if nb_block % 4 > 0:
             fifth_bordure = data[4*index : ]
 
+        """
+        Exemple nb_block = 10
+
+        first_bordure = data[0:2]
+        second_bordure = data[2:4]
+        third_bordure = data[4:6]
+        forth_bordure = data[6:8]
+
+        if nb_block % 4 > 0:
+            fifth_bordure = data[8:]
+        """
 
         p = multiprocessing.Process(target=cutting, args=(first_bordure, len(first_bordure), size, child1))
         p2 = multiprocessing.Process(target=cutting, args=(second_bordure, len(second_bordure), size, child2))
@@ -139,8 +138,8 @@ def int_to_hex(i):
         h = '0' + h
     return h
 
-def CTR(nonce, blocks, key):
-    ctr = 0
+def CTR(nonce, blocks, key, counter_start=0, child=None):
+    ctr = counter_start
     nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
     list_ret = []
     length_blocks = len(blocks) - 1
@@ -154,7 +153,87 @@ def CTR(nonce, blocks, key):
         ctr += 1
         nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
 
+    if child is None:
+        return list_ret
+    else:
+        child.send(list_ret)
+
+def multiprocessing_CTR(nonce, blocks, key):
+    nb_block = len(blocks)
+    list_ret = []
+
+    if nb_block >= 4:
+        print("Multi CTR")
+        parent1, child1 = multiprocessing.Pipe()
+        parent2, child2 = multiprocessing.Pipe()
+        parent3, child3 = multiprocessing.Pipe()
+        parent4, child4 = multiprocessing.Pipe()
+
+        index = (nb_block // 4)
+
+        first_bordure = blocks[0 : index]
+        second_bordure = blocks[index : 2*index]
+        third_bordure = blocks[2*index : 3*index]
+        forth_bordure = blocks[3*index : 4*index]
+        fifth_bordure =  ""
+
+        if nb_block % 4 > 0:
+            fifth_bordure = blocks[4*index : ]
+
+        ctr1 = 0
+        ctr2 = ctr1 + len(first_bordure)
+        ctr3 = ctr2 + len(second_bordure)
+        ctr4 = ctr3 + len(third_bordure)
+
+        p = multiprocessing.Process(target=CTR, args=(nonce, first_bordure, key, ctr1, child1))
+        p2 = multiprocessing.Process(target=CTR, args=(nonce, second_bordure, key, ctr2, child2))
+        p3 = multiprocessing.Process(target=CTR, args=(nonce, third_bordure, key, ctr3, child3))
+        p4 = multiprocessing.Process(target=CTR, args=(nonce, forth_bordure, key, ctr4, child4))
+
+        p.start()
+        p2.start()
+        p3.start()
+        p4.start()
+
+        p1_recv = parent1.recv()
+        p2_recv = parent2.recv()
+        p3_recv = parent3.recv()
+        p4_recv = parent4.recv()
+        p5_recv = []
+
+        if fifth_bordure != "":
+            parent5, child5 = multiprocessing.Pipe()
+            ctr5 = ctr4 + len(forth_bordure)
+            p5 = multiprocessing.Process(target=CTR, args=(nonce, fifth_bordure, key, ctr5, child5))
+            p5.start()
+            p5_recv = parent5.recv()
+            p5.join()
+            parent5.close(); child5.close()
+
+        list_ret = p1_recv + p2_recv + p3_recv + p4_recv + p5_recv
+
+        p.join()
+        p2.join()
+        p3.join()
+        p4.join()
+
+        parent1.close(); child1.close()
+        parent2.close(); child2.close()
+        parent3.close(); child3.close()
+        parent4.close(); child4.close()
+
+    else:
+        list_ret = CTR(nonce, blocks, key)
+
     return list_ret
+
+
+
+
+
+
+
+
 
 def string_to_hex(m):
     res = []
@@ -297,7 +376,11 @@ def main():
 
     li = decoupe_blocks(msg, size_block, mode) # Decoupe le message en n bloc de 8 octets
 
-    res = CTR(nonce, li, key) # Chiffrement/Dechiffrement de tous les blocs avec le mode CTR
+
+    res = multiprocessing_CTR(nonce, li, key)
+
+
+    # res = CTR(nonce, li, key) # Chiffrement/Dechiffrement de tous les blocs avec le mode CTR
 
     final = ""
     if args.enc:
