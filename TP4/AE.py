@@ -264,7 +264,6 @@ def hash_mdp(key):
 
     return tmp3
 
-
 def generate_from_mdp(hmdp):
     tmp = hmdp[:16] + hex(1)[2:]
     tmp2 = hmdp[16:] + hex(2)[2:]
@@ -387,11 +386,7 @@ def main():
 
     li = decoupe_blocks(msg, size_block, mode) # Decoupe le message en n bloc de 8 octets
 
-
-    res = multiprocessing_CTR(nonce, li, key)
-
-
-    # res = CTR(nonce, li, key) # Chiffrement/Dechiffrement de tous les blocs avec le mode CTR
+    res = multiprocessing_CTR(nonce, li, key)   # Parallelise la fonction de chiffrement par bloc CTR
 
     final = ""
     if args.enc:
@@ -410,7 +405,6 @@ def main():
                 print("Error padding")
                 exit(0)
 
-
     if mode == 'enc': # Encrypt-then-MAC
         mac = HMAC(mackey, final) # Signature MAC du message
         final = final + mac # Concatenation du message chiffre et son MAC sur 8 octets supplementaires
@@ -418,6 +412,8 @@ def main():
     if args.output == "stdout":
         if not binary and args.dec:
             final = bytes.fromhex(final).decode()
+        elif binary and args.dec:
+            final = binascii.unhexlify(final)
         print(final)
 
     else:
