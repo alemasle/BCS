@@ -3,6 +3,7 @@ import random
 import argparse
 import hashlib
 import binascii
+import multiprocessing
 from sys import argv
 from Midori64 import midori
 
@@ -12,14 +13,93 @@ def sha3Hash(data):
     dig = s.hexdigest()
     return dig;
 
+
+def cutting(data, data_size, size=16, child=None):
+    list_block = [data[i:i+size] for i in range(0, data_size, size) ]
+
+    if child is None:
+        return list_block
+    else:
+        child.send(list_block)
+
+
 def decoupe_blocks(data, size, mode="enc"):
     data_size = len(data)
     nb_block = data_size//size
     bits_restants = data_size%size
 
     list_block = []
-    for i in range(0, data_size, size):
-        list_block.append(data[i: i+size])
+
+    if nb_block >= 4:
+        print("Multiprocessing...", flush=True)
+
+        parent1, child1 = multiprocessing.Pipe()
+        parent2, child2 = multiprocessing.Pipe()
+        parent3, child3 = multiprocessing.Pipe()
+        parent4, child4 = multiprocessing.Pipe()
+
+        """
+        Exemple nb_block = 10
+
+        first_bordure = data[0:2]
+        second_bordure = data[2:4]
+        third_bordure = data[4:6]
+        forth_bordure = data[6:8]
+
+        if nb_block % 4 > 0:
+            fifth_bordure = data[8:]
+        """
+
+        index = (nb_block // 4)*size
+
+        first_bordure = data[0 : index]
+        second_bordure = data[index : 2*index]
+        third_bordure = data[2*index : 3*index]
+        forth_bordure = data[3*index : 4*index]
+        fifth_bordure =  ""
+
+        if nb_block % 4 > 0:
+            fifth_bordure = data[4*index : ]
+
+
+        p = multiprocessing.Process(target=cutting, args=(first_bordure, len(first_bordure), size, child1))
+        p2 = multiprocessing.Process(target=cutting, args=(second_bordure, len(second_bordure), size, child2))
+        p3 = multiprocessing.Process(target=cutting, args=(third_bordure, len(third_bordure), size, child3))
+        p4 = multiprocessing.Process(target=cutting, args=(forth_bordure, len(forth_bordure), size, child4))
+
+        p.start()
+        p2.start()
+        p3.start()
+        p4.start()
+
+        p1_recv = parent1.recv()
+        p2_recv = parent2.recv()
+        p3_recv = parent3.recv()
+        p4_recv = parent4.recv()
+        p5_recv = []
+
+        if fifth_bordure != "":
+            parent5, child5 = multiprocessing.Pipe()
+            p5 = multiprocessing.Process(target=cutting, args=(fifth_bordure, len(fifth_bordure), size, child5))
+            p5.start()
+            p5_recv = parent5.recv()
+            p5.join()
+            parent5.close(); child5.close()
+
+        list_block = p1_recv + p2_recv + p3_recv + p4_recv + p5_recv
+
+        p.join()
+        p2.join()
+        p3.join()
+        p4.join()
+
+        parent1.close(); child1.close()
+        parent2.close(); child2.close()
+        parent3.close(); child3.close()
+        parent4.close(); child4.close()
+
+    else:
+        list_block = cutting(data, data_size, size)
 
     if mode == "enc":
         if len(list_block[-1]) == size: # Cas bloc plein --> Ajout d'un bloc complet de padding 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
@@ -163,7 +243,6 @@ def main():
                     binary = True
 
         elif args.dec:
-            # try:
             with open(args.message_file, "r") as file:
                 msg = file.read() # On recupere l'hexadecimal du fichier
                 if msg[-3:] == 'bin':
@@ -217,6 +296,7 @@ def main():
 
     size_block = 16 #16 en char hexa soit 8 octets --> 64 bits
     mode = "dec" if args.dec else "enc"
+
     li = decoupe_blocks(msg, size_block, mode) # Decoupe le message en n bloc de 8 octets
 
     res = CTR(nonce, li, key) # Chiffrement/Dechiffrement de tous les blocs avec le mode CTR
