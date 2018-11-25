@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+"""
+@author Alexis LE MASLE M2 Cybersecurite
+"""
+
 import random
 import argparse
 import hashlib
