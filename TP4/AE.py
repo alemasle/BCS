@@ -332,9 +332,10 @@ def main():
         elif args.dec:
             with open(args.message_file, "r") as file:
                 msg = file.read() # On recupere l'hexadecimal du fichier
-                if msg[-3:] == 'bin':
+                bin = hash_mdp('bin'.encode()) # 'bin' haché sous la forme de 32 nibbles
+                if msg[-32:] == bin:
                     binary = True
-                    msg = msg[:-3]
+                    msg = msg[:-32]
 
             if msg[-1] == "\n":
                 msg = msg[:-1]
@@ -424,7 +425,7 @@ def main():
         else:
             with open(args.output, "w") as file:
                 if binary and args.enc:
-                    final = final + 'bin'   # On ajoute 'bin' a la fin pour que le dechiffrement sache le type de fichier
+                    final = final + hash_mdp('bin'.encode())   # On ajoute 'bin' haché 32 nibbles a la fin pour que le dechiffrement sache le type de fichier
 
                 elif not binary and args.dec:
                     final = bytes.fromhex(final).decode()
