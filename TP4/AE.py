@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import binascii
 import multiprocessing
-from sys import argv
 from Midori64 import midori
 
 def sha3Hash(data):
@@ -13,11 +12,8 @@ def sha3Hash(data):
     dig = s.hexdigest()
     return dig;
 
-
 def cutting(data, data_size, size=16, child=None):
-    # print("Child:", child.fileno(), " starts cutting", data_size)
-    list_block = [data[i:i+size] for i in range(0, data_size, size) ]
-
+    list_block = [data[i:i+size] for i in range(0, data_size, size)]
     if child is None:
         return list_block
     else:
@@ -71,21 +67,16 @@ def decoupe_blocks(data, size, mode="enc"):
         p4.start()
 
         p1_recv = parent1.recv()
-        # print("First part cutting OK")
         p2_recv = parent2.recv()
-        # print("Second part cutting OK")
         p3_recv = parent3.recv()
-        # print("Third part cutting OK")
         p4_recv = parent4.recv()
-        # print("Fourth part cutting OK")
         p5_recv = []
 
-        if fifth_bordure != "":
+        if fifth_bordure != "": # Si il existe un cinquieme thread
             parent5, child5 = multiprocessing.Pipe()
             p5 = multiprocessing.Process(target=cutting, args=(fifth_bordure, len(fifth_bordure), size, child5))
             p5.start()
             p5_recv = parent5.recv()
-            # print("Fifth part cutting OK")
             p5.join()
             parent5.close(); child5.close()
 
@@ -133,34 +124,26 @@ def decoupe_blocks(data, size, mode="enc"):
     return list_block
 
 def array_to_hex(li):
-    res = ""
-    for c in li:
-        res += hex(c)[2:]
+    res = "".join([hex(c)[2:] for c in li])
     return res
 
 def int_to_hex(i):
     h = hex(i)[2:]
-    while len(h) < 8:
-        h = '0' + h
+    h = h.zfill(8)
     return h
 
 def CTR(nonce, blocks, key, counter_start=0, child=None):
     ctr = counter_start
     nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
     list_ret = []
-    length_blocks = len(blocks) - 1
-    # print("child info:", child.fileno(), 'work to do=', length_blocks)
-
     cpt = 0
     total = len(blocks)
 
     for b in blocks:
-
         ret = midori(nonce_counter, key)
         res = array_to_hex(ret)
         fin = hex(int(res, 16) ^ int(b, 16))[2:]
-        while len(fin) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend moins de 16 chars
-            fin = '0' + fin
+        fin = fin.zfill(16) # Complete par un 0 si la forme hexadecimal du xor rend moins de 16 chars
         list_ret.append(fin)
         ctr += 1
         nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
@@ -210,13 +193,9 @@ def multiprocessing_CTR(nonce, blocks, key):
         p4.start()
 
         p1_recv = parent1.recv()
-        # print("First part CTR OK")
         p2_recv = parent2.recv()
-        # print("Second part CTR OK")
         p3_recv = parent3.recv()
-        # print("Third part CTR OK")
         p4_recv = parent4.recv()
-        # print("Fourth part CTR OK")
         p5_recv = []
 
         if fifth_bordure != "":
@@ -225,7 +204,6 @@ def multiprocessing_CTR(nonce, blocks, key):
             p5 = multiprocessing.Process(target=CTR, args=(nonce, fifth_bordure, key, ctr5, child5))
             p5.start()
             p5_recv = parent5.recv()
-            # print("FIFTH part CTR OK")
             p5.join()
             parent5.close(); child5.close()
 
@@ -247,10 +225,7 @@ def multiprocessing_CTR(nonce, blocks, key):
     return list_ret
 
 def string_to_hex(m):
-    res = []
-    for c in m:
-        tmp = '0x' + c
-        res.append(int(tmp, 16))
+    res = [int(c, 16) for c in m]
     return res
 
 def hash_mdp(key):
@@ -258,10 +233,7 @@ def hash_mdp(key):
     tmp = int(hash[:32], 16)
     tmp2 = int(hash[32:], 16)
     tmp3 = hex(tmp ^ tmp2)[2:] # Return hash taille 32
-
-    while len(tmp3) < 32:   # Complete par un 0 si la forme hexadecimal du xor rend 31 chars
-        tmp3 = '0' + tmp3
-
+    tmp3 = tmp3.zfill(32)    # Complete par un 0 si la forme hexadecimal du xor moins de 32 chars
     return tmp3
 
 def generate_from_mdp(hmdp):
@@ -270,7 +242,7 @@ def generate_from_mdp(hmdp):
     tmp3 = hmdp + hex(3)[2:]
     ke = sha3Hash(tmp.encode()) # 64 hexa
     ke = hash_mdp(ke.encode())   # Return key taille 32 (hash)
-    nonce = sha3Hash(tmp2.encode())[:24] # Nonce taille 24 hexa pour atteindre 32 char hexa avec le counter
+    nonce = sha3Hash(tmp2.encode())[:8] # Nonce taille 24 hexa pour atteindre 32 char hexa avec le counter
     mackey = sha3Hash(tmp3.encode())
     return ke, nonce, mackey
 
@@ -278,8 +250,7 @@ def HMAC(mackey, msg): # Generer un hash de taille 8 octets
     tmp = msg + mackey
     h = hash_mdp(tmp.encode())
     h = hex( int(h[:16],16) ^ int(h[16:],16) )[2:]
-    while len(h) < 16:   # Complete par un 0 si la forme hexadecimal du xor rend 16 chars ou moins
-        h = '0' + h
+    h = h.zfill(16)# Complete par un 0 si la forme hexadecimal du xor rend 16 chars ou moins
     return h
 
 
@@ -301,6 +272,7 @@ def main():
     group3.add_argument("-p","--password", help="Le mot de passe de chiffrement/dechiffrement")
     group3.add_argument("--password-file", help="Le fichier contenant le mot de passe de chiffrement/dechiffrement")
 
+    # Output result
     parser.add_argument("-o","--output", help="Le fichier de sortie (sortie standard par défaut)", default="stdout")
     args = parser.parse_args()
 
@@ -376,7 +348,7 @@ def main():
         tmp_mac = msg[-16:] # Recupere le MAC du chiffre
         tmp_cypher = msg[:-16] # Recupere le message du chiffre
         resultat = HMAC(mackey, tmp_cypher)
-        if resultat != tmp_mac:
+        if resultat != tmp_mac: # Verifie la concordance des signatures
             print("Signature ou mot de passe invalide!")
             exit(0)
         else:
@@ -387,15 +359,15 @@ def main():
 
     li = decoupe_blocks(msg, size_block, mode) # Decoupe le message en n bloc de 8 octets
 
-    res = multiprocessing_CTR(nonce, li, key)   # Parallelise la fonction de chiffrement par bloc CTR
+    res = multiprocessing_CTR(nonce, li, key)  # Parallelise la fonction de chiffrement par bloc CTR
 
     final = ""
     if args.enc:
-        final = "".join(res)
+        final = "".join(res)    # Reformation du message chiffre
 
     elif args.dec:
-        final = "".join(res)
-        if final[-1] == '1': # Suppresion du padding
+        final = "".join(res)    # Reformation du message dechiffre
+        if final[-1] == '1':    # Suppresion du padding
             final = final[:-1]
             while final[-1] == '0':
                 final = final[:-1]
@@ -406,7 +378,7 @@ def main():
                 print("Error padding")
                 exit(0)
 
-    if mode == 'enc': # Encrypt-then-MAC
+    if args.enc: # Encrypt-then-MAC
         mac = HMAC(mackey, final) # Signature MAC du message
         final = final + mac # Concatenation du message chiffre et son MAC sur 8 octets supplementaires
 
