@@ -165,7 +165,7 @@ def CTR(nonce, blocks, key, counter_start=0, child=None):
         ctr += 1
         nonce_counter = string_to_hex(nonce + int_to_hex(ctr))
         cpt += 1
-        if child.fileno() == 10 and (cpt / total) * 100 % 2 == 0:
+        if child is not None and child.fileno() == 10 and (cpt / total) * 100 % 2 == 0:
             print((cpt / total)*100, "% --", cpt, "/", total)
 
     if child is None:
